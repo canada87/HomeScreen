@@ -2,18 +2,177 @@ import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../utils/api';
 import { 
   Settings, Trash2, Plus, Grid, List, ExternalLink, 
-  Check, Edit3, Save, CheckSquare, Square, 
-  Globe, Server, Cpu, Terminal, Database, Cloud, Link, Upload
+  Check, Edit3, Save, CheckSquare, Square, Upload,
+  // Network & Web
+  Globe, Link, Wifi, WifiOff, Network, Router, Radio, Rss, Signal,
+  // Servers & Infrastructure
+  Server, Cloud, CloudOff, CloudLightning, Database, HardDrive, HardDriveDownload, HardDriveUpload, Cpu, MonitorCheck,
+  // Terminal & Code
+  Terminal, Code, Code2, CodeXml, GitBranch, GitMerge, GitCommit, Github, Package, PackageOpen,
+  // Media & Streaming
+  Play, PlayCircle, Pause, Music, Music2, Video, VideoOff, Camera, Mic, Headphones, Tv, Film, Youtube, Podcast, Radio as RadioIcon, Cast,
+  // Storage & Files
+  Folder, FolderOpen, File, FileText, FileCode, FileImage, FileVideo, FileArchive, FileDown, FileUp, Download, Upload as UploadIcon,
+  // Security & Auth
+  Shield, ShieldCheck, ShieldAlert, Lock, LockOpen, Key, KeyRound, Fingerprint, Eye, EyeOff,
+  // Monitoring & Stats
+  Activity, BarChart, BarChart2, BarChart3, LineChart, PieChart, TrendingUp, TrendingDown, Gauge, Zap,
+  // Home & IoT
+  Home, Lightbulb, Thermometer, Droplets, Wind, Sun, Moon, Star, CloudRain, CloudSnow,
+  // Containers & DevOps
+  Box, Boxes, Container, Layers, Share2, Workflow, Blocks, Puzzle,
+  // Notifications & Alerts
+  Bell, BellOff, BellRing, AlertTriangle, AlertCircle, AlertOctagon, Info, CheckCircle, XCircle,
+  // UI & Navigation
+  LayoutDashboard, LayoutGrid, Map, MapPin, Compass, Search, BookOpen, BookMarked, Bookmark, Rss as RssIcon,
+  // Apps & Tools
+  Mail, MessageCircle, MessageSquare, Calendar, Clock, Calculator, Printer, Scan, Sliders, SlidersHorizontal,
+  // Misc Tech
+  Cpu as CpuIcon, Smartphone, Tablet, Monitor, Laptop, Mouse, Keyboard, Usb, Bluetooth, Nfc, Webhook, BrainCircuit
 } from 'lucide-react';
 
 const PRESET_ICONS = {
+  // Network & Web
   globe: Globe,
+  link: Link,
+  wifi: Wifi,
+  'wifi-off': WifiOff,
+  network: Network,
+  router: Router,
+  radio: Radio,
+  rss: Rss,
+  signal: Signal,
+  webhook: Webhook,
+  // Servers & Infrastructure
   server: Server,
-  cpu: Cpu,
-  terminal: Terminal,
-  database: Database,
   cloud: Cloud,
-  link: Link
+  'cloud-off': CloudOff,
+  'cloud-lightning': CloudLightning,
+  database: Database,
+  'hard-drive': HardDrive,
+  'hard-drive-download': HardDriveDownload,
+  'hard-drive-upload': HardDriveUpload,
+  cpu: Cpu,
+  'monitor-check': MonitorCheck,
+  // Terminal & Code
+  terminal: Terminal,
+  code: Code,
+  'code-2': Code2,
+  'code-xml': CodeXml,
+  'git-branch': GitBranch,
+  'git-merge': GitMerge,
+  'git-commit': GitCommit,
+  github: Github,
+  package: Package,
+  'package-open': PackageOpen,
+  // Media & Streaming
+  play: Play,
+  'play-circle': PlayCircle,
+  pause: Pause,
+  music: Music,
+  'music-2': Music2,
+  video: Video,
+  'video-off': VideoOff,
+  camera: Camera,
+  mic: Mic,
+  headphones: Headphones,
+  tv: Tv,
+  film: Film,
+  youtube: Youtube,
+  podcast: Podcast,
+  cast: Cast,
+  // Storage & Files
+  folder: Folder,
+  'folder-open': FolderOpen,
+  file: File,
+  'file-text': FileText,
+  'file-code': FileCode,
+  'file-image': FileImage,
+  'file-video': FileVideo,
+  'file-archive': FileArchive,
+  download: Download,
+  // Security & Auth
+  shield: Shield,
+  'shield-check': ShieldCheck,
+  'shield-alert': ShieldAlert,
+  lock: Lock,
+  'lock-open': LockOpen,
+  key: Key,
+  'key-round': KeyRound,
+  fingerprint: Fingerprint,
+  eye: Eye,
+  'eye-off': EyeOff,
+  // Monitoring & Stats
+  activity: Activity,
+  'bar-chart': BarChart,
+  'bar-chart-2': BarChart2,
+  'bar-chart-3': BarChart3,
+  'line-chart': LineChart,
+  'pie-chart': PieChart,
+  'trending-up': TrendingUp,
+  'trending-down': TrendingDown,
+  gauge: Gauge,
+  zap: Zap,
+  // Home & IoT
+  home: Home,
+  lightbulb: Lightbulb,
+  thermometer: Thermometer,
+  droplets: Droplets,
+  wind: Wind,
+  sun: Sun,
+  moon: Moon,
+  star: Star,
+  'cloud-rain': CloudRain,
+  'cloud-snow': CloudSnow,
+  // Containers & DevOps
+  box: Box,
+  boxes: Boxes,
+  layers: Layers,
+  'share-2': Share2,
+  workflow: Workflow,
+  blocks: Blocks,
+  puzzle: Puzzle,
+  // Notifications & Alerts
+  bell: Bell,
+  'bell-off': BellOff,
+  'bell-ring': BellRing,
+  'alert-triangle': AlertTriangle,
+  'alert-circle': AlertCircle,
+  info: Info,
+  'check-circle': CheckCircle,
+  'x-circle': XCircle,
+  // UI & Navigation
+  'layout-dashboard': LayoutDashboard,
+  'layout-grid': LayoutGrid,
+  map: Map,
+  'map-pin': MapPin,
+  compass: Compass,
+  search: Search,
+  'book-open': BookOpen,
+  'book-marked': BookMarked,
+  bookmark: Bookmark,
+  // Apps & Tools
+  mail: Mail,
+  'message-circle': MessageCircle,
+  'message-square': MessageSquare,
+  calendar: Calendar,
+  clock: Clock,
+  calculator: Calculator,
+  printer: Printer,
+  scan: Scan,
+  sliders: Sliders,
+  'sliders-horizontal': SlidersHorizontal,
+  // Devices
+  smartphone: Smartphone,
+  tablet: Tablet,
+  monitor: Monitor,
+  laptop: Laptop,
+  mouse: Mouse,
+  keyboard: Keyboard,
+  usb: Usb,
+  bluetooth: Bluetooth,
+  nfc: Nfc,
+  'brain-circuit': BrainCircuit,
 };
 
 export default function Widget({ 
@@ -41,6 +200,7 @@ export default function Widget({
   const [linkUrl, setLinkUrl] = useState('');
   const [iconType, setIconType] = useState('favicon'); // 'favicon', 'preset', 'upload'
   const [iconValue, setIconValue] = useState('globe'); // preset name or base64 data
+  const [iconSearch, setIconSearch] = useState(''); // search filter for preset icons
   
   // Link dragging local states
   const [dragOverLinkIndex, setDragOverLinkIndex] = useState(null);
@@ -200,6 +360,7 @@ export default function Widget({
     setLinkUrl('');
     setIconType('favicon');
     setIconValue('globe');
+    setIconSearch('');
     setLinkModalOpen(true);
   };
 
@@ -211,6 +372,7 @@ export default function Widget({
     setLinkUrl(lnk.url);
     setIconType(lnk.iconType || 'favicon');
     setIconValue(lnk.iconValue || 'globe');
+    setIconSearch('');
     setLinkModalOpen(true);
   };
 
@@ -701,27 +863,58 @@ export default function Widget({
               {iconType === 'preset' && (
                 <div className="form-group">
                   <label className="form-label">Select Icon</label>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-                    {Object.keys(PRESET_ICONS).map(iconKey => {
-                      const IconComp = PRESET_ICONS[iconKey];
-                      return (
-                        <button
-                          key={iconKey}
-                          type="button"
-                          className="btn btn-secondary"
-                          style={{
-                            padding: '0.5rem',
-                            border: iconValue === iconKey ? '2px solid var(--primary)' : '1px solid var(--border-glass)',
-                            borderRadius: '8px',
-                            background: iconValue === iconKey ? 'rgba(99, 102, 241, 0.1)' : ''
-                          }}
-                          onClick={() => setIconValue(iconKey)}
-                        >
-                          <IconComp size={16} />
-                        </button>
-                      );
-                    })}
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Search icons… (e.g. server, camera, shield)"
+                    value={iconSearch}
+                    onChange={(e) => setIconSearch(e.target.value)}
+                    style={{ marginBottom: '0.5rem', fontSize: '0.85rem' }}
+                  />
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(40px, 1fr))',
+                    gap: '0.4rem',
+                    maxHeight: '220px',
+                    overflowY: 'auto',
+                    padding: '0.25rem',
+                    scrollbarWidth: 'thin'
+                  }}>
+                    {Object.keys(PRESET_ICONS)
+                      .filter(k => !iconSearch || k.includes(iconSearch.toLowerCase()))
+                      .map(iconKey => {
+                        const IconComp = PRESET_ICONS[iconKey];
+                        return (
+                          <button
+                            key={iconKey}
+                            type="button"
+                            className="btn btn-secondary"
+                            title={iconKey}
+                            style={{
+                              padding: '0.5rem',
+                              border: iconValue === iconKey ? '2px solid var(--primary)' : '1px solid var(--border-glass)',
+                              borderRadius: '8px',
+                              background: iconValue === iconKey ? 'rgba(99, 102, 241, 0.15)' : '',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                            onClick={() => setIconValue(iconKey)}
+                          >
+                            <IconComp size={16} />
+                          </button>
+                        );
+                      })
+                    }
+                    {Object.keys(PRESET_ICONS).filter(k => !iconSearch || k.includes(iconSearch.toLowerCase())).length === 0 && (
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', gridColumn: '1 / -1' }}>No icons found.</span>
+                    )}
                   </div>
+                  {iconValue && PRESET_ICONS[iconValue] && (
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      Selected: <strong>{iconValue}</strong>
+                    </div>
+                  )}
                 </div>
               )}
 
