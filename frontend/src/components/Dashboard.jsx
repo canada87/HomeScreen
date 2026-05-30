@@ -13,6 +13,10 @@ export default function Dashboard({ dashboardId }) {
   const [widgetType, setWidgetType] = useState('links'); // 'links', 'note', 'todo'
   const [widgetTitle, setWidgetTitle] = useState('');
 
+  // Drag and drop states
+  const [draggingIndex, setDraggingIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+
   const fetchWidgets = async () => {
     try {
       setLoading(true);
@@ -78,6 +82,110 @@ export default function Dashboard({ dashboardId }) {
     }
   };
 
+  // Widget Drag and Drop Handlers
+  const handleDragStart = (e, index) => {
+    if (
+      e.target.closest('.link-item-grid') || 
+      e.target.closest('.link-item-list') || 
+      e.target.closest('button') || 
+      e.target.closest('input') || 
+      e.target.closest('textarea')
+    ) {
+      e.preventDefault();
+      return;
+    }
+    setDraggingIndex(index);
+    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'widget', index }));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    if (draggingIndex !== null && draggingIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggingIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = async (e, targetIndex) => {
+    e.preventDefault();
+    const dataStr = e.dataTransfer.getData('text/plain');
+    setDraggingIndex(null);
+    setDragOverIndex(null);
+    if (!dataStr) return;
+
+    try {
+      const data = JSON.parse(dataStr);
+      if (data.type === 'widget') {
+        const sourceIndex = data.index;
+        if (sourceIndex === targetIndex) return;
+
+        const reordered = [...widgets];
+        const [moved] = reordered.splice(sourceIndex, 1);
+        reordered.splice(targetIndex, 0, moved);
+
+        setWidgets(reordered);
+
+        // Save layout configuration to DB in background
+        reordered.forEach((w, i) => {
+          api.updateWidget(w.id, { order_index: i }).catch(err => console.error(err));
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Link Drag and Drop Handler (moves link icons inside/between folders)
+  const handleMoveLink = async (sourceWidgetId, sourceLinkIndex, targetWidgetId, targetLinkIndex) => {
+    const sourceWidget = widgets.find(w => w.id === sourceWidgetId);
+    const targetWidget = widgets.find(w => w.id === targetWidgetId);
+    if (!sourceWidget || !targetWidget) return;
+
+    const sourceLinks = [...(sourceWidget.properties.links || [])];
+    const [movedLink] = sourceLinks.splice(sourceLinkIndex, 1);
+
+    if (sourceWidgetId === targetWidgetId) {
+      // Reorder same folder
+      const updatedLinks = [...(sourceWidget.properties.links || [])];
+      const [removed] = updatedLinks.splice(sourceLinkIndex, 1);
+      updatedLinks.splice(targetLinkIndex, 0, removed);
+
+      await handleUpdateWidget(sourceWidgetId, {
+        properties: {
+          ...sourceWidget.properties,
+          links: updatedLinks
+        }
+      });
+    } else {
+      // Transfer between folders
+      const targetLinks = [...(targetWidget.properties.links || [])];
+      if (targetLinkIndex !== undefined && targetLinkIndex !== null) {
+        targetLinks.splice(targetLinkIndex, 0, movedLink);
+      } else {
+        targetLinks.push(movedLink);
+      }
+
+      await handleUpdateWidget(sourceWidgetId, {
+        properties: {
+          ...sourceWidget.properties,
+          links: sourceLinks
+        }
+      });
+
+      await handleUpdateWidget(targetWidgetId, {
+        properties: {
+          ...targetWidget.properties,
+          links: targetLinks
+        }
+      });
+    }
+  };
+
   return (
     <div className="dashboard-container">
       {error && (
@@ -109,12 +217,19 @@ export default function Dashboard({ dashboardId }) {
           </div>
 
           <div className="widget-grid">
-            {widgets.map(w => (
+            {widgets.map((w, idx) => (
               <Widget 
                 key={w.id} 
                 widget={w}
                 onUpdate={handleUpdateWidget}
                 onDelete={handleDeleteWidget}
+                onMoveLink={handleMoveLink}
+                isDragging={draggingIndex === idx}
+                isDragOver={dragOverIndex === idx}
+                onDragStart={(e) => handleDragStart(e, idx)}
+                onDragOver={(e) => handleDragOver(e, idx)}
+                onDragEnd={handleDragEnd}
+                onDrop={(e) => handleDrop(e, idx)}
               />
             ))}
           </div>

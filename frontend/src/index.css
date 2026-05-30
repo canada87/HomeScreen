@@ -245,8 +245,9 @@ body {
   position: relative;
   display: flex;
   flex-direction: column;
-  height: 380px;
-  overflow: hidden;
+  min-height: 320px;
+  height: auto;
+  overflow: visible;
 }
 
 .widget-header {
@@ -280,7 +281,7 @@ body {
 .widget-body {
   flex: 1;
   padding: 1.25rem;
-  overflow-y: auto;
+  overflow: visible;
 }
 
 /* Bookmark Folders Widget */
@@ -429,13 +430,14 @@ body {
 .todo-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: auto;
+  min-height: 100%;
   gap: 1rem;
 }
 
 .todo-list {
   flex: 1;
-  overflow-y: auto;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -823,4 +825,35 @@ body {
   .widget-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Drag and Drop visual feedback styling */
+.widget-card.dragging {
+  opacity: 0.4;
+  border: 1px dashed var(--primary) !important;
+  transform: scale(0.98);
+}
+
+.widget-card.drag-over {
+  border: 2px dashed var(--primary) !important;
+  background: rgba(99, 102, 241, 0.05) !important;
+}
+
+.link-item-grid.dragging, .link-item-list.dragging {
+  opacity: 0.4;
+  background: rgba(99, 102, 241, 0.1) !important;
+}
+
+.link-item-grid.drag-over {
+  background: rgba(99, 102, 241, 0.15) !important;
+  border-radius: var(--radius-sm);
+}
+
+.link-item-list.drag-over {
+  background: rgba(99, 102, 241, 0.15) !important;
+}
+
+.widget-card.link-drag-over {
+  border-color: var(--success) !important;
+  background: rgba(16, 185, 129, 0.03) !important;
 }

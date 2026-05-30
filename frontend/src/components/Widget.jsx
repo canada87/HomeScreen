@@ -16,7 +16,19 @@ const PRESET_ICONS = {
   link: Link
 };
 
-export default function Widget({ widget, onUpdate, onDelete }) {
+export default function Widget({ 
+  widget, 
+  index, 
+  onUpdate, 
+  onDelete, 
+  onMoveLink, 
+  isDragging, 
+  isDragOver, 
+  onDragStart, 
+  onDragOver, 
+  onDragEnd, 
+  onDrop 
+}) {
   const [editingWidget, setEditingWidget] = useState(false);
   const [widgetTitle, setWidgetTitle] = useState(widget.title);
   const [noteColor, setNoteColor] = useState(widget.properties.color || 'yellow');
@@ -30,12 +42,112 @@ export default function Widget({ widget, onUpdate, onDelete }) {
   const [iconType, setIconType] = useState('favicon'); // 'favicon', 'preset', 'upload'
   const [iconValue, setIconValue] = useState('globe'); // preset name or base64 data
   
+  // Link dragging local states
+  const [dragOverLinkIndex, setDragOverLinkIndex] = useState(null);
+  const [isLinkDragOver, setIsLinkDragOver] = useState(false);
+
   // Note widget states
   const [noteContent, setNoteContent] = useState(widget.properties.content || '');
   const noteTimeoutRef = useRef(null);
 
   // Todo widget states
   const [newTodoText, setNewTodoText] = useState('');
+
+  // Link Drag and Drop Handlers
+  const handleLinkDragStart = (e, lnkIndex) => {
+    e.stopPropagation();
+    window.__draggingLink = { sourceWidgetId: widget.id, linkIndex: lnkIndex };
+    e.dataTransfer.setData('text/plain', JSON.stringify({
+      type: 'link',
+      sourceWidgetId: widget.id,
+      linkIndex: lnkIndex
+    }));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleLinkDragEnd = () => {
+    window.__draggingLink = null;
+  };
+
+  const handleLinkDragOver = (e, lnkIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.__draggingLink) {
+      setDragOverLinkIndex(lnkIndex);
+    }
+  };
+
+  const handleLinkDragLeave = () => {
+    setDragOverLinkIndex(null);
+  };
+
+  const handleLinkDrop = (e, targetLnkIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverLinkIndex(null);
+    const dataStr = e.dataTransfer.getData('text/plain');
+    if (!dataStr) return;
+    try {
+      const data = JSON.parse(dataStr);
+      if (data.type === 'link') {
+        onMoveLink(data.sourceWidgetId, data.linkIndex, widget.id, targetLnkIndex);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleBodyDragOverForLink = (e) => {
+    if (widget.type === 'links' && window.__draggingLink) {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsLinkDragOver(true);
+    }
+  };
+
+  const handleBodyDragLeaveForLink = () => {
+    setIsLinkDragOver(false);
+  };
+
+  const handleBodyDropForLink = (e) => {
+    if (widget.type === 'links' && window.__draggingLink) {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsLinkDragOver(false);
+      const dataStr = e.dataTransfer.getData('text/plain');
+      if (!dataStr) return;
+      try {
+        const data = JSON.parse(dataStr);
+        if (data.type === 'link') {
+          onMoveLink(data.sourceWidgetId, data.linkIndex, widget.id, null);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  const handleCardDrop = (e) => {
+    if (widget.type === 'links' && window.__draggingLink) {
+      handleBodyDropForLink(e);
+    } else {
+      onDrop(e);
+    }
+  };
+
+  const handleCardDragOver = (e) => {
+    if (widget.type === 'links' && window.__draggingLink) {
+      handleBodyDragOverForLink(e);
+    } else {
+      onDragOver(e);
+    }
+  };
+
+  const handleCardDragLeave = (e) => {
+    if (widget.type === 'links' && window.__draggingLink) {
+      handleBodyDragLeaveForLink(e);
+    }
+  };
 
   // Update notes with debouncing
   const handleNoteChange = (e) => {
@@ -261,7 +373,16 @@ export default function Widget({ widget, onUpdate, onDelete }) {
   const percentComplete = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
-    <div className={`glass-panel widget-card ${widget.type === 'note' ? `note-${noteColor}` : ''}`}>
+    <div 
+      draggable="true"
+      onDragStart={onDragStart}
+      onDragOver={handleCardDragOver}
+      onDragLeave={handleCardDragLeave}
+      onDragEnd={onDragEnd}
+      onDrop={handleCardDrop}
+      className={`glass-panel widget-card ${widget.type === 'note' ? `note-${noteColor}` : ''} ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''} ${isLinkDragOver ? 'link-drag-over' : ''}`}
+      style={{ cursor: 'grab' }}
+    >
       {/* Widget Header */}
       <div className="widget-header">
         <h3 className="widget-title" title={widget.title}>{widget.title}</h3>
@@ -297,8 +418,18 @@ export default function Widget({ widget, onUpdate, onDelete }) {
               </div>
             ) : viewMode === 'grid' ? (
               <div className="links-grid">
-                {widget.properties.links.map(lnk => (
-                  <div key={lnk.id} style={{ position: 'relative' }}>
+                {widget.properties.links.map((lnk, lnkIdx) => (
+                  <div 
+                    key={lnk.id} 
+                    style={{ position: 'relative' }}
+                    draggable="true"
+                    onDragStart={(e) => handleLinkDragStart(e, lnkIdx)}
+                    onDragEnd={handleLinkDragEnd}
+                    onDragOver={(e) => handleLinkDragOver(e, lnkIdx)}
+                    onDragLeave={handleLinkDragLeave}
+                    onDrop={(e) => handleLinkDrop(e, lnkIdx)}
+                    className={`${dragOverLinkIndex === lnkIdx ? 'drag-over' : ''}`}
+                  >
                     <a 
                       href={lnk.url} 
                       target="_blank" 
@@ -325,13 +456,19 @@ export default function Widget({ widget, onUpdate, onDelete }) {
               </div>
             ) : (
               <div className="links-list">
-                {widget.properties.links.map(lnk => (
+                {widget.properties.links.map((lnk, lnkIdx) => (
                   <a 
                     key={lnk.id} 
                     href={lnk.url} 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="link-item-list"
+                    className={`link-item-list ${dragOverLinkIndex === lnkIdx ? 'drag-over' : ''}`}
+                    draggable="true"
+                    onDragStart={(e) => handleLinkDragStart(e, lnkIdx)}
+                    onDragEnd={handleLinkDragEnd}
+                    onDragOver={(e) => handleLinkDragOver(e, lnkIdx)}
+                    onDragLeave={handleLinkDragLeave}
+                    onDrop={(e) => handleLinkDrop(e, lnkIdx)}
                   >
                     <div className="link-icon-container-list">
                       {renderLinkIcon(lnk)}
