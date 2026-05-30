@@ -8,9 +8,9 @@ import {
   // Servers & Infrastructure
   Server, Cloud, CloudOff, CloudLightning, Database, HardDrive, HardDriveDownload, HardDriveUpload, Cpu, MonitorCheck,
   // Terminal & Code
-  Terminal, Code, Code2, CodeXml, GitBranch, GitMerge, GitCommit, Github, Package, PackageOpen,
+  Terminal, Code, Code2, CodeXml, GitBranch, GitMerge, GitCommit, Package, PackageOpen,
   // Media & Streaming
-  Play, PlayCircle, Pause, Music, Music2, Video, VideoOff, Camera, Mic, Headphones, Tv, Film, Youtube, Podcast, Radio as RadioIcon, Cast,
+  Play, PlayCircle, Pause, Music, Music2, Video, VideoOff, Camera, Mic, Headphones, Tv, Film, Podcast, Radio as RadioIcon, Cast,
   // Storage & Files
   Folder, FolderOpen, File, FileText, FileCode, FileImage, FileVideo, FileArchive, FileDown, FileUp, Download, Upload as UploadIcon,
   // Security & Auth
@@ -62,7 +62,6 @@ const PRESET_ICONS = {
   'git-branch': GitBranch,
   'git-merge': GitMerge,
   'git-commit': GitCommit,
-  github: Github,
   package: Package,
   'package-open': PackageOpen,
   // Media & Streaming
@@ -78,7 +77,6 @@ const PRESET_ICONS = {
   headphones: Headphones,
   tv: Tv,
   film: Film,
-  youtube: Youtube,
   podcast: Podcast,
   cast: Cast,
   // Storage & Files
