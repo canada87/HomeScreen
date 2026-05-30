@@ -7,12 +7,23 @@ services:
       dockerfile: Dockerfile
     image: homescreen:latest
     container_name: homescreen
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     volumes:
       - ./data:/app/data
     environment:
       - PORT=3000
       - JWT_SECRET=change-this-to-a-secure-secret-key-1234
       - NODE_ENV=production
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: homescreen-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - homescreen
     restart: unless-stopped
