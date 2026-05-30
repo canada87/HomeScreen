@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  homescreen:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: homescreen:latest
+    container_name: homescreen
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PORT=3000
+      - JWT_SECRET=change-this-to-a-secure-secret-key-1234
+      - NODE_ENV=production
+    restart: unless-stopped
