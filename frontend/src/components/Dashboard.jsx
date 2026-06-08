@@ -3,6 +3,34 @@ import { api } from '../utils/api';
 import Widget from './Widget';
 import { Plus, AppWindow, FileText, CheckSquare, LayoutGrid, Columns } from 'lucide-react';
 
+// Custom hook to calculate the number of columns dynamically
+function useColumns(layoutMode) {
+  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  if (width <= 768) {
+    return 1;
+  }
+
+  if (layoutMode === '3col') {
+    if (width <= 1024) return 2;
+    return 3;
+  }
+
+  // Auto layout mode
+  const padding = width <= 768 ? 32 : 64;
+  const containerWidth = width - padding;
+  const colWidth = 360;
+  const gap = 24;
+  const cols = Math.floor((containerWidth + gap) / (colWidth + gap));
+  return Math.max(1, cols);
+}
+
 export default function Dashboard({ dashboardId }) {
   const [widgets, setWidgets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,6 +45,14 @@ export default function Dashboard({ dashboardId }) {
     setLayoutMode(mode);
     localStorage.setItem('homescreen_layout_mode', mode);
   };
+
+  const numColumns = useColumns(layoutMode);
+
+  // Distribute widgets across columns
+  const columns = Array.from({ length: numColumns }, () => []);
+  widgets.forEach((widget, idx) => {
+    columns[idx % numColumns].push({ widget, originalIndex: idx });
+  });
   
   // Create widget modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -150,6 +186,28 @@ export default function Dashboard({ dashboardId }) {
     }
   };
 
+  const handleColumnDragOver = (e, colIdx) => {
+    e.preventDefault();
+    const colWidgets = columns[colIdx];
+    if (colWidgets.length > 0) {
+      const lastWidgetIndex = colWidgets[colWidgets.length - 1].originalIndex;
+      if (draggingIndex !== null && draggingIndex !== lastWidgetIndex) {
+        setDragOverIndex(lastWidgetIndex);
+      }
+    }
+  };
+
+  const handleColumnDrop = (e, colIdx) => {
+    e.preventDefault();
+    const colWidgets = columns[colIdx];
+    if (colWidgets.length === 0) {
+      handleDrop(e, widgets.length > 0 ? widgets.length - 1 : 0);
+    } else {
+      const lastWidgetIndex = colWidgets[colWidgets.length - 1].originalIndex;
+      handleDrop(e, lastWidgetIndex);
+    }
+  };
+
   // Link Drag and Drop Handler (moves link icons inside/between folders)
   const handleMoveLink = async (sourceWidgetId, sourceLinkIndex, targetWidgetId, targetLinkIndex) => {
     const sourceWidget = widgets.find(w => w.id === sourceWidgetId);
@@ -278,21 +336,44 @@ export default function Dashboard({ dashboardId }) {
             </button>
           </div>
 
-          <div className={`widget-grid ${layoutMode === '3col' ? 'grid-3col' : ''}`}>
-            {widgets.map((w, idx) => (
-              <Widget 
-                key={w.id} 
-                widget={w}
-                onUpdate={handleUpdateWidget}
-                onDelete={handleDeleteWidget}
-                onMoveLink={handleMoveLink}
-                isDragging={draggingIndex === idx}
-                isDragOver={dragOverIndex === idx}
-                onDragStart={(e) => handleDragStart(e, idx)}
-                onDragOver={(e) => handleDragOver(e, idx)}
-                onDragEnd={handleDragEnd}
-                onDrop={(e) => handleDrop(e, idx)}
-              />
+          <div 
+            className="widget-grid" 
+            style={{ 
+              display: 'grid', 
+              gridTemplateColumns: `repeat(${numColumns}, 1fr)`,
+              gap: '1.5rem',
+              alignItems: 'start'
+            }}
+          >
+            {columns.map((columnWidgets, colIdx) => (
+              <div 
+                key={colIdx} 
+                className="widget-column" 
+                style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '1.5rem',
+                  minHeight: '200px'
+                }}
+                onDragOver={(e) => handleColumnDragOver(e, colIdx)}
+                onDrop={(e) => handleColumnDrop(e, colIdx)}
+              >
+                {columnWidgets.map(({ widget, originalIndex }) => (
+                  <Widget 
+                    key={widget.id} 
+                    widget={widget}
+                    onUpdate={handleUpdateWidget}
+                    onDelete={handleDeleteWidget}
+                    onMoveLink={handleMoveLink}
+                    isDragging={draggingIndex === originalIndex}
+                    isDragOver={dragOverIndex === originalIndex}
+                    onDragStart={(e) => handleDragStart(e, originalIndex)}
+                    onDragOver={(e) => handleDragOver(e, originalIndex)}
+                    onDragEnd={handleDragEnd}
+                    onDrop={(e) => handleDrop(e, originalIndex)}
+                  />
+                ))}
+              </div>
             ))}
           </div>
         </>

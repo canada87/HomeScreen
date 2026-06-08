@@ -235,20 +235,9 @@ body {
 
 .widget-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: 1.5rem;
   margin-top: 1.5rem;
   align-items: start;
-}
-
-.widget-grid.grid-3col {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-@media (max-width: 1024px) {
-  .widget-grid.grid-3col {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 /* Widget Styles */
@@ -831,10 +820,6 @@ body {
   
   .dashboard-container {
     padding: 1rem;
-  }
-  
-  .widget-grid, .widget-grid.grid-3col {
-    grid-template-columns: 1fr;
   }
 }
 
