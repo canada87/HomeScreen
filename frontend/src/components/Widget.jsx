@@ -226,6 +226,17 @@ export default function Widget({
   // Note widget states
   const [noteContent, setNoteContent] = useState(widget.properties.content || '');
   const noteTimeoutRef = useRef(null);
+  const noteTextareaRef = useRef(null);
+
+  const autoResizeNote = (el) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  };
+
+  useEffect(() => {
+    autoResizeNote(noteTextareaRef.current);
+  }, [noteContent]);
 
   // Todo widget states
   const [newTodoText, setNewTodoText] = useState('');
@@ -684,6 +695,7 @@ export default function Widget({
         {/* POST-IT (STICKY NOTE) WIDGET */}
         {widget.type === 'note' && (
           <textarea
+            ref={noteTextareaRef}
             className="note-textarea"
             placeholder="Start typing your note here..."
             value={noteContent}
