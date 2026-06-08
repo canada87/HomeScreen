@@ -289,9 +289,11 @@ body {
 
 /* Bookmark Folders Widget */
 .links-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
-  gap: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+  row-gap: 1rem;
+  align-content: flex-start;
 }
 
 .links-list {
