@@ -245,9 +245,12 @@ body {
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 320px;
   height: auto;
   overflow: visible;
+}
+
+.widget-card[class*="note-"] {
+  min-height: 240px;
 }
 
 .widget-header {
