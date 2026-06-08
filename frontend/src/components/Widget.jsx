@@ -204,6 +204,25 @@ export default function Widget({
   const [dragOverLinkIndex, setDragOverLinkIndex] = useState(null);
   const [isLinkDragOver, setIsLinkDragOver] = useState(false);
 
+  // Detect if links grid wraps to multiple rows
+  const linksGridRef = useRef(null);
+  const [isMultiRow, setIsMultiRow] = useState(false);
+
+  useEffect(() => {
+    const el = linksGridRef.current;
+    if (!el || widget.type !== 'links') return;
+    const check = () => {
+      const items = el.querySelectorAll('.link-item-grid');
+      if (items.length <= 1) { setIsMultiRow(false); return; }
+      const firstTop = items[0].getBoundingClientRect().top;
+      setIsMultiRow(Array.from(items).some(item => item.getBoundingClientRect().top > firstTop + 1));
+    };
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [widget.properties.links, widget.type]);
+
   // Note widget states
   const [noteContent, setNoteContent] = useState(widget.properties.content || '');
   const noteTimeoutRef = useRef(null);
@@ -577,7 +596,7 @@ export default function Widget({
                 </button>
               </div>
             ) : viewMode === 'grid' ? (
-              <div className="links-grid">
+              <div ref={linksGridRef} className={`links-grid${isMultiRow ? ' links-grid--multirow' : ''}`}>
                 {widget.properties.links.map((lnk, lnkIdx) => (
                   <div 
                     key={lnk.id} 

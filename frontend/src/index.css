@@ -296,6 +296,11 @@ body {
   align-content: flex-start;
 }
 
+.links-grid--multirow {
+  justify-content: flex-start;
+  column-gap: 1rem;
+}
+
 .links-list {
   display: flex;
   flex-direction: column;
