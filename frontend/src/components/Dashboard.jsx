@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import Widget from './Widget';
-import { Plus, AppWindow, FileText, CheckSquare } from 'lucide-react';
+import { Plus, AppWindow, FileText, CheckSquare, LayoutGrid, Columns } from 'lucide-react';
 
 export default function Dashboard({ dashboardId }) {
   const [widgets, setWidgets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Layout mode state: 'auto' or '3col'
+  const [layoutMode, setLayoutMode] = useState(() => {
+    return localStorage.getItem('homescreen_layout_mode') || 'auto';
+  });
+
+  const handleSetLayoutMode = (mode) => {
+    setLayoutMode(mode);
+    localStorage.setItem('homescreen_layout_mode', mode);
+  };
   
   // Create widget modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -209,14 +219,66 @@ export default function Dashboard({ dashboardId }) {
         </div>
       ) : (
         <>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+            {/* Layout Mode Toggle */}
+            <div className="glass-panel" style={{ display: 'flex', padding: '3px', borderRadius: 'var(--radius-full)', background: 'rgba(30, 41, 59, 0.3)', gap: '2px', border: '1px solid var(--border-glass)' }}>
+              <button 
+                type="button"
+                className="btn"
+                style={{ 
+                  borderRadius: 'var(--radius-full)', 
+                  padding: '0.45rem 1rem', 
+                  fontSize: '0.85rem', 
+                  fontWeight: 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  border: 'none',
+                  background: layoutMode === 'auto' ? 'var(--primary)' : 'transparent',
+                  color: layoutMode === 'auto' ? '#ffffff' : 'var(--text-secondary)',
+                  boxShadow: layoutMode === 'auto' ? 'var(--shadow-sm)' : 'none',
+                  transition: 'all var(--transition-fast)',
+                  cursor: 'pointer'
+                }}
+                onClick={() => handleSetLayoutMode('auto')}
+                title="Auto Columns"
+              >
+                <LayoutGrid size={14} />
+                <span>Auto</span>
+              </button>
+              <button 
+                type="button"
+                className="btn"
+                style={{ 
+                  borderRadius: 'var(--radius-full)', 
+                  padding: '0.45rem 1rem', 
+                  fontSize: '0.85rem', 
+                  fontWeight: 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  border: 'none',
+                  background: layoutMode === '3col' ? 'var(--primary)' : 'transparent',
+                  color: layoutMode === '3col' ? '#ffffff' : 'var(--text-secondary)',
+                  boxShadow: layoutMode === '3col' ? 'var(--shadow-sm)' : 'none',
+                  transition: 'all var(--transition-fast)',
+                  cursor: 'pointer'
+                }}
+                onClick={() => handleSetLayoutMode('3col')}
+                title="3 Fixed Columns"
+              >
+                <Columns size={14} />
+                <span>3 Columns</span>
+              </button>
+            </div>
+
             <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
               <Plus size={18} />
               Add Widget
             </button>
           </div>
 
-          <div className="widget-grid">
+          <div className={`widget-grid ${layoutMode === '3col' ? 'grid-3col' : ''}`}>
             {widgets.map((w, idx) => (
               <Widget 
                 key={w.id} 
