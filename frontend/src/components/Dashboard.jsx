@@ -104,7 +104,7 @@ export default function Dashboard({ dashboardId }) {
         title: widgetTitle.trim(),
         properties: initialProperties
       });
-      setWidgets([...widgets, newWidget]);
+      setWidgets(prevWidgets => [...prevWidgets, newWidget]);
       setModalOpen(false);
       setWidgetTitle('');
     } catch (err) {
@@ -115,7 +115,7 @@ export default function Dashboard({ dashboardId }) {
   const handleUpdateWidget = async (widgetId, fields) => {
     try {
       const updatedWidget = await api.updateWidget(widgetId, fields);
-      setWidgets(widgets.map(w => w.id === widgetId ? updatedWidget : w));
+      setWidgets(prevWidgets => prevWidgets.map(w => w.id === widgetId ? updatedWidget : w));
     } catch (err) {
       setError(err.message || 'Failed to update widget');
     }
@@ -124,7 +124,7 @@ export default function Dashboard({ dashboardId }) {
   const handleDeleteWidget = async (widgetId) => {
     try {
       await api.deleteWidget(widgetId);
-      setWidgets(widgets.filter(w => w.id !== widgetId));
+      setWidgets(prevWidgets => prevWidgets.filter(w => w.id !== widgetId));
     } catch (err) {
       setError(err.message || 'Failed to delete widget');
     }
@@ -240,19 +240,31 @@ export default function Dashboard({ dashboardId }) {
         targetLinks.push(movedLink);
       }
 
-      await handleUpdateWidget(sourceWidgetId, {
-        properties: {
-          ...sourceWidget.properties,
-          links: sourceLinks
-        }
-      });
+      try {
+        setError('');
+        const [updatedSource, updatedTarget] = await Promise.all([
+          api.updateWidget(sourceWidgetId, {
+            properties: {
+              ...sourceWidget.properties,
+              links: sourceLinks
+            }
+          }),
+          api.updateWidget(targetWidgetId, {
+            properties: {
+              ...targetWidget.properties,
+              links: targetLinks
+            }
+          })
+        ]);
 
-      await handleUpdateWidget(targetWidgetId, {
-        properties: {
-          ...targetWidget.properties,
-          links: targetLinks
-        }
-      });
+        setWidgets(prevWidgets => prevWidgets.map(w => {
+          if (w.id === sourceWidgetId) return updatedSource;
+          if (w.id === targetWidgetId) return updatedTarget;
+          return w;
+        }));
+      } catch (err) {
+        setError(err.message || 'Failed to move bookmark');
+      }
     }
   };
 
