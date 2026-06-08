@@ -297,8 +297,10 @@ body {
 }
 
 .links-grid--multirow {
-  justify-content: flex-start;
-  column-gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 1rem;
+  justify-content: initial;
 }
 
 .links-list {
