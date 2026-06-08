@@ -37,13 +37,13 @@ export default function Dashboard({ dashboardId }) {
   const [error, setError] = useState('');
 
   // Layout mode state: 'auto' or '3col'
-  const [layoutMode, setLayoutMode] = useState(() => {
-    return localStorage.getItem('homescreen_layout_mode') || 'auto';
-  });
+  const [layoutMode, setLayoutMode] = useState('auto');
 
   const handleSetLayoutMode = (mode) => {
     setLayoutMode(mode);
-    localStorage.setItem('homescreen_layout_mode', mode);
+    if (dashboardId) {
+      localStorage.setItem(`homescreen_layout_mode_${dashboardId}`, mode);
+    }
   };
 
   const numColumns = useColumns(layoutMode);
@@ -79,6 +79,8 @@ export default function Dashboard({ dashboardId }) {
   useEffect(() => {
     if (dashboardId) {
       fetchWidgets();
+      const savedMode = localStorage.getItem(`homescreen_layout_mode_${dashboardId}`) || 'auto';
+      setLayoutMode(savedMode);
     }
   }, [dashboardId]);
 
