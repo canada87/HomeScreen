@@ -255,9 +255,13 @@ export default function Dashboard({ dashboardId }) {
     const [movedLink] = sourceLinks.splice(sourceLinkIndex, 1);
 
     if (sourceWidgetId === targetWidgetId) {
+      if (targetLinkIndex === undefined || targetLinkIndex === null) return;
+      // targetLinkIndex is an insertion point in the original list; shift it after removal
+      const insertAt = sourceLinkIndex < targetLinkIndex ? targetLinkIndex - 1 : targetLinkIndex;
+      if (insertAt === sourceLinkIndex) return;
       const updatedLinks = [...(sourceWidget.properties.links || [])];
       const [removed] = updatedLinks.splice(sourceLinkIndex, 1);
-      updatedLinks.splice(targetLinkIndex, 0, removed);
+      updatedLinks.splice(insertAt, 0, removed);
       await handleUpdateWidget(sourceWidgetId, {
         properties: { ...sourceWidget.properties, links: updatedLinks }
       });

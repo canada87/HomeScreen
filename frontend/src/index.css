@@ -905,6 +905,24 @@ body {
   background: rgba(99, 102, 241, 0.15) !important;
 }
 
+.link-drop-before {
+  box-shadow: -3px 0 0 0 var(--primary);
+  border-radius: var(--radius-sm);
+}
+
+.link-drop-after {
+  box-shadow: 3px 0 0 0 var(--primary);
+  border-radius: var(--radius-sm);
+}
+
+.link-item-list.link-drop-before {
+  box-shadow: 0 -2px 0 0 var(--primary);
+}
+
+.link-item-list.link-drop-after {
+  box-shadow: 0 2px 0 0 var(--primary);
+}
+
 .widget-card.link-drag-over {
   border-color: var(--success) !important;
   background: rgba(16, 185, 129, 0.03) !important;

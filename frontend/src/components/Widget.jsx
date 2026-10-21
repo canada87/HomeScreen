@@ -201,7 +201,7 @@ export default function Widget({
   const [uploadedIcons, setUploadedIcons] = useState([]); // custom images already used in any widget
   
   // Link dragging local states
-  const [dragOverLinkIndex, setDragOverLinkIndex] = useState(null);
+  const [linkDropTarget, setLinkDropTarget] = useState(null); // { index, position: 'before' | 'after' }
   const [isLinkDragOver, setIsLinkDragOver] = useState(false);
 
   // Detect if links grid wraps to multiple rows
@@ -259,24 +259,33 @@ export default function Widget({
 
   const handleLinkDragEnd = () => {
     window.__draggingLink = null;
+    setLinkDropTarget(null);
+  };
+
+  // Grid items are laid out in rows (split on X), list items in a column (split on Y)
+  const getLinkDropPosition = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    return viewMode === 'grid'
+      ? (e.clientX < rect.left + rect.width / 2 ? 'before' : 'after')
+      : (e.clientY < rect.top + rect.height / 2 ? 'before' : 'after');
   };
 
   const handleLinkDragOver = (e, lnkIndex) => {
+    if (!window.__draggingLink) return;
     e.preventDefault();
     e.stopPropagation();
-    if (window.__draggingLink) {
-      setDragOverLinkIndex(lnkIndex);
+    setIsLinkDragOver(false);
+    const position = getLinkDropPosition(e);
+    if (linkDropTarget?.index !== lnkIndex || linkDropTarget?.position !== position) {
+      setLinkDropTarget({ index: lnkIndex, position });
     }
   };
 
-  const handleLinkDragLeave = () => {
-    setDragOverLinkIndex(null);
-  };
-
-  const handleLinkDrop = (e, targetLnkIndex) => {
+  const handleLinkDrop = (e, lnkIndex) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragOverLinkIndex(null);
+    setLinkDropTarget(null);
+    const targetLnkIndex = getLinkDropPosition(e) === 'before' ? lnkIndex : lnkIndex + 1;
     const dataStr = e.dataTransfer.getData('text/plain');
     if (!dataStr) return;
     try {
@@ -297,8 +306,11 @@ export default function Widget({
     }
   };
 
-  const handleBodyDragLeaveForLink = () => {
+  const handleBodyDragLeaveForLink = (e) => {
+    // Ignore leave events fired when moving between the card's own children
+    if (e.currentTarget.contains(e.relatedTarget)) return;
     setIsLinkDragOver(false);
+    setLinkDropTarget(null);
   };
 
   const handleBodyDropForLink = (e) => {
@@ -311,7 +323,12 @@ export default function Widget({
       try {
         const data = JSON.parse(dataStr);
         if (data.type === 'link') {
-          onMoveLink(data.sourceWidgetId, data.linkIndex, widget.id, null);
+          // Dropped in a gap between items: use the last highlighted position (or append)
+          const targetIndex = linkDropTarget
+            ? (linkDropTarget.position === 'before' ? linkDropTarget.index : linkDropTarget.index + 1)
+            : null;
+          setLinkDropTarget(null);
+          onMoveLink(data.sourceWidgetId, data.linkIndex, widget.id, targetIndex);
         }
       } catch (err) {
         console.error(err);
@@ -719,9 +736,8 @@ export default function Widget({
                     onDragStart={(e) => handleLinkDragStart(e, lnkIdx)}
                     onDragEnd={handleLinkDragEnd}
                     onDragOver={(e) => handleLinkDragOver(e, lnkIdx)}
-                    onDragLeave={handleLinkDragLeave}
                     onDrop={(e) => handleLinkDrop(e, lnkIdx)}
-                    className={`${dragOverLinkIndex === lnkIdx ? 'drag-over' : ''}`}
+                    className={linkDropTarget?.index === lnkIdx ? `link-drop-${linkDropTarget.position}` : ''}
                   >
                     <a 
                       href={lnk.url} 
@@ -755,12 +771,11 @@ export default function Widget({
                     href={lnk.url} 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className={`link-item-list ${dragOverLinkIndex === lnkIdx ? 'drag-over' : ''}`}
+                    className={`link-item-list ${linkDropTarget?.index === lnkIdx ? `link-drop-${linkDropTarget.position}` : ''}`}
                     draggable="true"
                     onDragStart={(e) => handleLinkDragStart(e, lnkIdx)}
                     onDragEnd={handleLinkDragEnd}
                     onDragOver={(e) => handleLinkDragOver(e, lnkIdx)}
-                    onDragLeave={handleLinkDragLeave}
                     onDrop={(e) => handleLinkDrop(e, lnkIdx)}
                   >
                     <div className="link-icon-container-list">
