@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../utils/api';
+import { resizeImageDataUrl, ICON_MAX_SIZE, ICON_MAX_DATA_URL_LENGTH } from '../utils/image';
 import { 
   Settings, Trash2, Plus, Grid, List, Edit3, GripVertical,
   // Network & Web
@@ -23,7 +24,7 @@ import {
   // Notifications & Alerts
   Bell, BellOff, BellRing, AlertTriangle, AlertCircle, Info, CheckCircle, XCircle,
   // UI & Navigation
-  LayoutDashboard, LayoutGrid, Map, MapPin, Compass, Search, BookOpen, BookMarked, Bookmark,
+  LayoutDashboard, LayoutGrid, Map as MapIcon, MapPin, Compass, Search, BookOpen, BookMarked, Bookmark,
   // Apps & Tools
   Mail, MessageCircle, MessageSquare, Calendar, Clock, Calculator, Printer, Scan, Sliders, SlidersHorizontal,
   // Misc Tech
@@ -141,7 +142,7 @@ const PRESET_ICONS = {
   // UI & Navigation
   'layout-dashboard': LayoutDashboard,
   'layout-grid': LayoutGrid,
-  map: Map,
+  map: MapIcon,
   'map-pin': MapPin,
   compass: Compass,
   search: Search,
@@ -222,6 +223,38 @@ export default function Widget({
     observer.observe(el);
     return () => observer.disconnect();
   }, [widget.properties.links, widget.type]);
+
+  // One-off migration: shrink custom icons uploaded at full resolution before
+  // resizing existed, so the widget payload stays small.
+  const iconShrinkStartedRef = useRef(false);
+  useEffect(() => {
+    if (widget.type !== 'links' || iconShrinkStartedRef.current) return;
+    const links = widget.properties.links || [];
+    const oversized = links.filter(l =>
+      l.iconType === 'upload' && typeof l.iconValue === 'string' && l.iconValue.length > ICON_MAX_DATA_URL_LENGTH
+    );
+    if (oversized.length === 0) return;
+    iconShrinkStartedRef.current = true;
+
+    (async () => {
+      const resized = new Map(); // original data URL -> resized (links sharing an image resize once)
+      for (const lnk of oversized) {
+        if (resized.has(lnk.iconValue)) continue;
+        try {
+          resized.set(lnk.iconValue, await resizeImageDataUrl(lnk.iconValue));
+        } catch {
+          // leave undecodable images untouched
+        }
+      }
+      if (![...resized].some(([from, to]) => from !== to)) return;
+      onUpdate(widget.id, {
+        properties: {
+          ...widget.properties,
+          links: links.map(l => resized.has(l.iconValue) ? { ...l, iconValue: resized.get(l.iconValue) } : l)
+        }
+      });
+    })();
+  }, [widget, onUpdate]);
 
   // Note widget states
   const [noteContent, setNoteContent] = useState(widget.properties.content || '');
@@ -444,14 +477,18 @@ export default function Widget({
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert("Image is too large. Please select an image under 2MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Image is too large. Please select an image under 10MB.");
       return;
     }
 
     const reader = new FileReader();
-    reader.onload = (event) => {
-      setIconValue(event.target.result);
+    reader.onload = async (event) => {
+      try {
+        setIconValue(await resizeImageDataUrl(event.target.result));
+      } catch {
+        alert("Could not read this image. Please try a different file.");
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -1093,10 +1130,10 @@ export default function Widget({
 
               {iconType === 'upload' && (
                 <div className="form-group">
-                  <label className="form-label">Upload PNG / JPEG (max 2MB)</label>
+                  <label className="form-label">Upload PNG / JPEG / WebP (resized to {ICON_MAX_SIZE}px)</label>
                   <input
                     type="file"
-                    accept="image/png, image/jpeg"
+                    accept="image/png, image/jpeg, image/webp"
                     className="form-input"
                     onChange={handleFileUpload}
                     style={{ fontSize: '0.85rem' }}
