@@ -55,13 +55,16 @@ HomeScreen/
 
 ### Metodo A: Con Docker Compose (Consigliato per il Self-Hosting)
 
-Questa opzione compila l'applicazione all'interno di un unico container Docker leggero ed espone la porta `3000`.
+Questa opzione esegue l'applicazione in un unico container Docker leggero ed espone la porta `3000`.
+
+L'immagine viene buildata automaticamente da GitHub Actions ad ogni push su `main` (e ad ogni tag `v*`) e pubblicata su GitHub Container Registry come `ghcr.io/canada87/homescreen` (tag `latest`, `sha-<commit>` e versioni semver), per `linux/amd64` e `linux/arm64`. Non serve quindi buildare sul server.
 
 1.  Assicurati che Docker e Docker Compose siano installati sul server.
-2.  Avvia l'applicazione con il comando:
+2.  Scarica l'ultima immagine e avvia l'applicazione:
     ```bash
-    docker compose up -d --build
+    docker compose pull && docker compose up -d
     ```
+    Per buildare in locale invece di usare l'immagine pubblicata, sostituisci `image:` con la sezione `build:` commentata nel `docker-compose.yml` e usa `docker compose up -d --build`.
 3.  Il servizio sarà disponibile all'indirizzo `http://localhost:3000`. Puoi configurare il tuo tunnel Cloudflare per puntare a questa porta.
 4.  Tutti i dati (utenti, preferenze, post-it e icone personalizzate) verranno memorizzati nel file `./data/homescreen.db`. Eseguire il backup del servizio significa copiare questo singolo file!
 

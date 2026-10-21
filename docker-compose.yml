@@ -2,10 +2,12 @@ version: '3.8'
 
 services:
   homescreen:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: homescreen:latest
+    # Prebuilt image published by GitHub Actions (.github/workflows/docker-publish.yml).
+    # To build locally instead, replace `image` with:
+    #   build:
+    #     context: .
+    #     dockerfile: Dockerfile
+    image: ghcr.io/canada87/homescreen:latest
     container_name: homescreen
     expose:
       - "3000"
