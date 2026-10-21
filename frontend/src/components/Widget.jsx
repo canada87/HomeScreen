@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../utils/api';
 import { 
-  Settings, Trash2, Plus, Grid, List, ExternalLink, 
-  Check, Edit3, Save, CheckSquare, Square, Upload,
+  Settings, Trash2, Plus, Grid, List, Edit3,
   // Network & Web
   Globe, Link, Wifi, WifiOff, Network, Router, Radio, Rss, Signal,
   // Servers & Infrastructure
@@ -10,9 +9,9 @@ import {
   // Terminal & Code
   Terminal, Code, Code2, CodeXml, GitBranch, GitMerge, GitCommit, Package, PackageOpen,
   // Media & Streaming
-  Play, PlayCircle, Pause, Music, Music2, Video, VideoOff, Camera, Mic, Headphones, Tv, Film, Podcast, Radio as RadioIcon, Cast,
+  Play, PlayCircle, Pause, Music, Music2, Video, VideoOff, Camera, Mic, Headphones, Tv, Film, Podcast, Cast,
   // Storage & Files
-  Folder, FolderOpen, File, FileText, FileCode, FileImage, FileVideo, FileArchive, FileDown, FileUp, Download, Upload as UploadIcon,
+  Folder, FolderOpen, File, FileText, FileCode, FileImage, FileVideo, FileArchive, Download,
   // Security & Auth
   Shield, ShieldCheck, ShieldAlert, Lock, LockOpen, Key, KeyRound, Fingerprint, Eye, EyeOff,
   // Monitoring & Stats
@@ -20,15 +19,15 @@ import {
   // Home & IoT
   Home, Lightbulb, Thermometer, Droplets, Wind, Sun, Moon, Star, CloudRain, CloudSnow,
   // Containers & DevOps
-  Box, Boxes, Container, Layers, Share2, Workflow, Blocks, Puzzle,
+  Box, Boxes, Layers, Share2, Workflow, Blocks, Puzzle,
   // Notifications & Alerts
-  Bell, BellOff, BellRing, AlertTriangle, AlertCircle, AlertOctagon, Info, CheckCircle, XCircle,
+  Bell, BellOff, BellRing, AlertTriangle, AlertCircle, Info, CheckCircle, XCircle,
   // UI & Navigation
-  LayoutDashboard, LayoutGrid, Map, MapPin, Compass, Search, BookOpen, BookMarked, Bookmark, Rss as RssIcon,
+  LayoutDashboard, LayoutGrid, Map, MapPin, Compass, Search, BookOpen, BookMarked, Bookmark,
   // Apps & Tools
   Mail, MessageCircle, MessageSquare, Calendar, Clock, Calculator, Printer, Scan, Sliders, SlidersHorizontal,
   // Misc Tech
-  Cpu as CpuIcon, Smartphone, Tablet, Monitor, Laptop, Mouse, Keyboard, Usb, Bluetooth, Nfc, Webhook, BrainCircuit
+  Smartphone, Tablet, Monitor, Laptop, Mouse, Keyboard, Usb, Bluetooth, Nfc, Webhook, BrainCircuit
 } from 'lucide-react';
 
 const PRESET_ICONS = {
@@ -175,7 +174,6 @@ const PRESET_ICONS = {
 
 export default function Widget({ 
   widget, 
-  index, 
   onUpdate, 
   onDelete, 
   onMoveLink, 
@@ -432,7 +430,7 @@ export default function Widget({
   const handleSaveLink = (e) => {
     e.preventDefault();
     const links = widget.properties.links || [];
-    let updatedLinks = [];
+    let updatedLinks;
 
     const linkData = {
       id: editingLink ? editingLink.id : Date.now().toString(),

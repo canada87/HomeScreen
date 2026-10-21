@@ -120,7 +120,7 @@ export default function Dashboard({ dashboardId }) {
       setLayoutMode(savedMode);
       const savedLayout = localStorage.getItem(`homescreen_col_layout_${dashboardId}`);
       if (savedLayout) {
-        try { setColLayout(JSON.parse(savedLayout)); } catch {}
+        try { setColLayout(JSON.parse(savedLayout)); } catch { /* ignore corrupted saved layout */ }
       }
     }
   }, [dashboardId]);

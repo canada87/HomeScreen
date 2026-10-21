@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from './utils/api';
 import Dashboard from './components/Dashboard';
 import AdminPanel from './components/AdminPanel';
 import { 
   LogOut, ShieldAlert, Plus, Edit2, Trash2, Key, 
-  Home, ChevronRight, LayoutGrid, CheckSquare, FileText
+  LayoutGrid
 } from 'lucide-react';
 
 export default function App() {
@@ -48,7 +48,7 @@ export default function App() {
           
           // Load dashboards
           await fetchDashboards();
-        } catch (err) {
+        } catch {
           handleLogout();
         }
       }
