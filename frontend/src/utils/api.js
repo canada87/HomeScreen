@@ -159,6 +159,14 @@ export const api = {
     return handleResponse(res);
   },
 
+  // Custom images already uploaded in any of the user's link widgets
+  getUploadedIcons: async () => {
+    const res = await fetch(`${API_URL}/api/icons/uploaded`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
+
   // Favicon Proxy URL helper
   getFaviconUrl: (url) => {
     return `${API_URL}/api/favicon?url=${encodeURIComponent(url)}`;

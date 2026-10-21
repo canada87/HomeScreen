@@ -199,6 +199,7 @@ export default function Widget({
   const [iconType, setIconType] = useState('favicon'); // 'favicon', 'preset', 'upload'
   const [iconValue, setIconValue] = useState('globe'); // preset name or base64 data
   const [iconSearch, setIconSearch] = useState(''); // search filter for preset icons
+  const [uploadedIcons, setUploadedIcons] = useState([]); // custom images already used in any widget
   
   // Link dragging local states
   const [dragOverLinkIndex, setDragOverLinkIndex] = useState(null);
@@ -382,7 +383,14 @@ export default function Widget({
   };
 
   // --- BOOKMARKS (LINKS) WIDGET FUNCTIONS ---
+  const loadUploadedIcons = () => {
+    api.getUploadedIcons()
+      .then(setUploadedIcons)
+      .catch(err => console.error('Failed to load uploaded icons', err));
+  };
+
   const handleOpenAddLink = () => {
+    loadUploadedIcons();
     setEditingLink(null);
     setLinkName('');
     setLinkUrl('');
@@ -395,6 +403,7 @@ export default function Widget({
   const handleOpenEditLink = (lnk, e) => {
     e.preventDefault();
     e.stopPropagation();
+    loadUploadedIcons();
     setEditingLink(lnk);
     setLinkName(lnk.name);
     setLinkUrl(lnk.url);
@@ -885,7 +894,7 @@ export default function Widget({
                 >
                   <option value="favicon">Automatic Favicon (Resolves automatically)</option>
                   <option value="preset">Preset Icon (Choose a style)</option>
-                  <option value="upload">Upload Custom Image (PNG/JPEG)</option>
+                  <option value="upload">Custom Image (Upload or reuse)</option>
                 </select>
               </div>
 
@@ -957,6 +966,41 @@ export default function Widget({
                     onChange={handleFileUpload}
                     style={{ fontSize: '0.85rem' }}
                   />
+                  {uploadedIcons.length > 0 && (
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <span className="form-label" style={{ fontSize: '0.75rem' }}>Or reuse an image you already uploaded:</span>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(48px, 1fr))',
+                        gap: '0.4rem',
+                        maxHeight: '160px',
+                        overflowY: 'auto',
+                        padding: '0.25rem',
+                        scrollbarWidth: 'thin'
+                      }}>
+                        {uploadedIcons.map(icon => (
+                          <button
+                            key={icon.value}
+                            type="button"
+                            className="btn btn-secondary"
+                            title={icon.names.join(', ')}
+                            style={{
+                              padding: '0.35rem',
+                              border: iconValue === icon.value ? '2px solid var(--primary)' : '1px solid var(--border-glass)',
+                              borderRadius: '8px',
+                              background: iconValue === icon.value ? 'rgba(99, 102, 241, 0.15)' : '',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                            onClick={() => setIconValue(icon.value)}
+                          >
+                            <img src={icon.value} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {iconValue && iconValue.startsWith('data:image') && (
                     <div className="image-upload-preview">
                       <span className="form-label" style={{ fontSize: '0.75rem' }}>Selected Preview:</span>

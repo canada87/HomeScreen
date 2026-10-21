@@ -499,6 +499,41 @@ app.delete('/api/widgets/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// --- UPLOADED ICONS LIBRARY ---
+
+// Get all distinct custom images already uploaded in the user's link widgets (across all dashboards)
+app.get('/api/icons/uploaded', authenticateToken, async (req, res) => {
+  try {
+    const widgets = await query(
+      `SELECT w.properties FROM widgets w
+       JOIN dashboards d ON d.id = w.dashboard_id
+       WHERE d.user_id = ? AND w.type = 'links'
+       ORDER BY d.order_index ASC, w.order_index ASC`,
+      [req.user.id]
+    );
+
+    const icons = new Map(); // iconValue -> list of link names using it
+    for (const w of widgets) {
+      let props;
+      try {
+        props = JSON.parse(w.properties);
+      } catch {
+        continue;
+      }
+      for (const lnk of props.links || []) {
+        if (lnk.iconType === 'upload' && typeof lnk.iconValue === 'string' && lnk.iconValue.startsWith('data:image')) {
+          if (!icons.has(lnk.iconValue)) icons.set(lnk.iconValue, []);
+          icons.get(lnk.iconValue).push(lnk.name);
+        }
+      }
+    }
+
+    res.json([...icons].map(([value, names]) => ({ value, names })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- FAVICON PROXY ---
 app.get('/api/favicon', async (req, res) => {
   const { url } = req.query;
