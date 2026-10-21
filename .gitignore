@@ -23,3 +23,6 @@ backend/data/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Claude Code local config
+.claude/
