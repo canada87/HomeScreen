@@ -506,6 +506,47 @@ body {
   transition: all var(--transition-fast);
 }
 
+.todo-text {
+  cursor: text;
+}
+
+.todo-edit-input {
+  flex: 1;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  padding: 0.15rem 0.35rem;
+  color: var(--text-primary);
+  outline: none;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.todo-drag-handle {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  cursor: grab;
+  opacity: 0.4;
+  transition: opacity var(--transition-fast);
+}
+
+.todo-item:hover .todo-drag-handle {
+  opacity: 1;
+}
+
+.todo-item.dragging {
+  opacity: 0.4;
+}
+
+.todo-item.drop-before {
+  box-shadow: 0 -2px 0 0 var(--primary);
+}
+
+.todo-item.drop-after {
+  box-shadow: 0 2px 0 0 var(--primary);
+}
+
 .todo-item.completed .todo-text {
   text-decoration: line-through;
   color: var(--text-muted);

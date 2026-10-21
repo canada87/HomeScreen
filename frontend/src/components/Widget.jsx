@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../utils/api';
 import { 
-  Settings, Trash2, Plus, Grid, List, Edit3,
+  Settings, Trash2, Plus, Grid, List, Edit3, GripVertical,
   // Network & Web
   Globe, Link, Wifi, WifiOff, Network, Router, Radio, Rss, Signal,
   // Servers & Infrastructure
@@ -240,6 +240,10 @@ export default function Widget({
 
   // Todo widget states
   const [newTodoText, setNewTodoText] = useState('');
+  const [editingTodoId, setEditingTodoId] = useState(null);
+  const [editingTodoText, setEditingTodoText] = useState('');
+  const [draggingTodoIndex, setDraggingTodoIndex] = useState(null);
+  const [todoDropTarget, setTodoDropTarget] = useState(null); // { index, position: 'before' | 'after' }
 
   // Link Drag and Drop Handlers
   const handleLinkDragStart = (e, lnkIndex) => {
@@ -316,7 +320,12 @@ export default function Widget({
   };
 
   const handleCardDrop = (e) => {
-    if (widget.type === 'links' && window.__draggingLink) {
+    if (window.__draggingTodo) {
+      // Todo items only reorder within their own list
+      e.preventDefault();
+      e.stopPropagation();
+      handleTodoDragEnd();
+    } else if (widget.type === 'links' && window.__draggingLink) {
       handleBodyDropForLink(e);
     } else {
       onDrop(e);
@@ -324,7 +333,9 @@ export default function Widget({
   };
 
   const handleCardDragOver = (e) => {
-    if (widget.type === 'links' && window.__draggingLink) {
+    if (window.__draggingTodo) {
+      e.stopPropagation();
+    } else if (widget.type === 'links' && window.__draggingLink) {
       handleBodyDragOverForLink(e);
     } else {
       onDragOver(e);
@@ -528,6 +539,83 @@ export default function Widget({
       properties: {
         ...widget.properties,
         items: updatedItems
+      }
+    });
+  };
+
+  const handleStartEditTodo = (item) => {
+    setEditingTodoId(item.id);
+    setEditingTodoText(item.text);
+  };
+
+  const handleSaveEditTodo = () => {
+    const text = editingTodoText.trim();
+    const items = widget.properties.items || [];
+    const original = items.find(item => item.id === editingTodoId);
+    setEditingTodoId(null);
+    if (!original || !text || text === original.text) return;
+
+    onUpdate(widget.id, {
+      properties: {
+        ...widget.properties,
+        items: items.map(item => item.id === original.id ? { ...item, text } : item)
+      }
+    });
+  };
+
+  const handleEditTodoKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveEditTodo();
+    } else if (e.key === 'Escape') {
+      setEditingTodoId(null);
+    }
+  };
+
+  // Todo reordering (drag within the same list)
+  const handleTodoDragStart = (e, index) => {
+    e.stopPropagation();
+    window.__draggingTodo = { widgetId: widget.id, index };
+    setDraggingTodoIndex(index);
+    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'todo', widgetId: widget.id, index }));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleTodoDragEnd = () => {
+    window.__draggingTodo = null;
+    setDraggingTodoIndex(null);
+    setTodoDropTarget(null);
+  };
+
+  const handleTodoDragOver = (e, index) => {
+    if (window.__draggingTodo?.widgetId !== widget.id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const position = e.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+    if (todoDropTarget?.index !== index || todoDropTarget?.position !== position) {
+      setTodoDropTarget({ index, position });
+    }
+  };
+
+  const handleTodoDrop = (e, index) => {
+    if (window.__draggingTodo?.widgetId !== widget.id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const sourceIndex = window.__draggingTodo.index;
+    const rect = e.currentTarget.getBoundingClientRect();
+    let targetIndex = e.clientY < rect.top + rect.height / 2 ? index : index + 1;
+    handleTodoDragEnd();
+    if (sourceIndex < targetIndex) targetIndex -= 1;
+    if (sourceIndex === targetIndex) return;
+
+    const items = [...(widget.properties.items || [])];
+    const [moved] = items.splice(sourceIndex, 1);
+    items.splice(targetIndex, 0, moved);
+    onUpdate(widget.id, {
+      properties: {
+        ...widget.properties,
+        items
       }
     });
   };
@@ -739,15 +827,41 @@ export default function Widget({
                   No tasks in this list.
                 </div>
               ) : (
-                todoItems.map(item => (
-                  <div key={item.id} className={`todo-item ${item.completed ? 'completed' : ''}`}>
+                todoItems.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    className={[
+                      'todo-item',
+                      item.completed && 'completed',
+                      draggingTodoIndex === idx && 'dragging',
+                      todoDropTarget?.index === idx && `drop-${todoDropTarget.position}`
+                    ].filter(Boolean).join(' ')}
+                    draggable={editingTodoId !== item.id}
+                    onDragStart={(e) => handleTodoDragStart(e, idx)}
+                    onDragEnd={handleTodoDragEnd}
+                    onDragOver={(e) => handleTodoDragOver(e, idx)}
+                    onDrop={(e) => handleTodoDrop(e, idx)}
+                  >
+                    <GripVertical size={14} className="todo-drag-handle" />
                     <input
                       type="checkbox"
                       className="todo-checkbox"
                       checked={item.completed}
                       onChange={() => handleToggleTodo(item.id)}
                     />
-                    <span className="todo-text">{item.text}</span>
+                    {editingTodoId === item.id ? (
+                      <input
+                        type="text"
+                        className="todo-edit-input"
+                        value={editingTodoText}
+                        onChange={(e) => setEditingTodoText(e.target.value)}
+                        onKeyDown={handleEditTodoKeyDown}
+                        onBlur={handleSaveEditTodo}
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="todo-text" title="Click to edit" onClick={() => handleStartEditTodo(item)}>{item.text}</span>
+                    )}
                     <button className="todo-delete-btn" onClick={() => handleDeleteTodo(item.id)}>
                       <Trash2 size={12} />
                     </button>
