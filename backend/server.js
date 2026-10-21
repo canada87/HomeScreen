@@ -535,35 +535,136 @@ app.get('/api/icons/uploaded', authenticateToken, async (req, res) => {
 });
 
 // --- FAVICON PROXY ---
+const FAVICON_TIMEOUT_MS = 2500;
+const FAVICON_OK_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const FAVICON_MISS_TTL_MS = 6 * 60 * 60 * 1000; // retry missing icons after 6 hours
+const FAVICON_CACHE_MAX = 500;
+const faviconCache = new Map(); // origin -> { icon: { body, contentType } | null, expires }
+const faviconInFlight = new Map(); // origin -> Promise
+
+// Origins of all saved bookmarks. The server only fetches icons directly from these,
+// so the public, unauthenticated endpoint can't be used to probe arbitrary internal hosts.
+let knownOrigins = { set: new Set(), builtAt: 0 };
+const isKnownOrigin = async (origin) => {
+  // Rebuild when stale, or shortly after a miss so freshly added bookmarks are picked up
+  const age = Date.now() - knownOrigins.builtAt;
+  if (age < 60 * 1000 && (knownOrigins.set.has(origin) || age < 5 * 1000)) {
+    return knownOrigins.set.has(origin);
+  }
+  const set = new Set();
+  const widgets = await query("SELECT properties FROM widgets WHERE type = 'links'");
+  for (const w of widgets) {
+    try {
+      for (const lnk of JSON.parse(w.properties).links || []) {
+        const parsed = parseLinkUrl(lnk.url);
+        if (parsed) set.add(parsed.origin);
+      }
+    } catch {
+      // ignore malformed widget properties
+    }
+  }
+  knownOrigins = { set, builtAt: Date.now() };
+  return set.has(origin);
+};
+
+const parseLinkUrl = (url) => {
+  try {
+    return new URL(/^https?:\/\//i.test(url) ? url : 'https://' + url);
+  } catch {
+    return null;
+  }
+};
+
+const fetchImage = async (url) => {
+  const response = await fetch(url, { signal: AbortSignal.timeout(FAVICON_TIMEOUT_MS), redirect: 'follow' });
+  const contentType = (response.headers.get('content-type') || '').split(';')[0].trim();
+  if (!response.ok || !(contentType.startsWith('image/') || contentType === 'application/octet-stream')) return null;
+  const body = Buffer.from(await response.arrayBuffer());
+  if (body.length === 0 || body.length > 1024 * 1024) return null;
+  return { body, contentType: contentType.startsWith('image/') ? contentType : 'image/x-icon' };
+};
+
+// Look for <link rel="icon" href="..."> in the page HTML
+const findIconInHtml = async (pageUrl) => {
+  const response = await fetch(pageUrl, { signal: AbortSignal.timeout(FAVICON_TIMEOUT_MS), redirect: 'follow' });
+  if (!response.ok || !(response.headers.get('content-type') || '').includes('text/html')) return null;
+  const html = (await response.text()).slice(0, 200 * 1024);
+  for (const tag of html.match(/<link\b[^>]*>/gi) || []) {
+    const rel = tag.match(/\brel\s*=\s*["']?([^"'>]+)/i)?.[1].toLowerCase() || '';
+    const href = tag.match(/\bhref\s*=\s*["']?([^"'\s>]+)/i)?.[1];
+    if (href && /(^|\s)(icon|shortcut icon|apple-touch-icon)(\s|$)/.test(rel)) {
+      return new URL(href, response.url).href;
+    }
+  }
+  return null;
+};
+
+const resolveFavicon = async (parsed, allowDirect) => {
+  if (allowDirect) {
+    // The server usually sits on the same network as self-hosted services, which
+    // Google can't reach, so ask the site itself first.
+    try {
+      const icon = await fetchImage(`${parsed.origin}/favicon.ico`);
+      if (icon) return icon;
+    } catch {
+      // unreachable or timed out, try the next source
+    }
+    try {
+      const iconUrl = await findIconInHtml(parsed.href);
+      const icon = iconUrl && await fetchImage(iconUrl);
+      if (icon) return icon;
+    } catch {
+      // unreachable or timed out, try the next source
+    }
+  }
+  try {
+    return await fetchImage(`https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=64`);
+  } catch {
+    return null;
+  }
+};
+
 app.get('/api/favicon', async (req, res) => {
   const { url } = req.query;
   if (!url) {
     return res.status(400).json({ error: 'URL parameter is required' });
   }
 
-  try {
-    // Make sure we have a protocol
-    let targetUrl = url;
-    if (!/^https?:\/\//i.test(targetUrl)) {
-      targetUrl = 'https://' + targetUrl;
-    }
-
-    const parsed = new URL(targetUrl);
-    const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=64`;
-
-    const response = await fetch(googleFaviconUrl);
-    if (response.ok) {
-      const contentType = response.headers.get('content-type');
-      res.setHeader('Content-Type', contentType || 'image/png');
-      res.setHeader('Cache-Control', 'public, max-age=604800'); // Cache for 7 days
-      const arrayBuffer = await response.arrayBuffer();
-      return res.send(Buffer.from(arrayBuffer));
-    }
-  } catch (err) {
-    // Fail silently to default
+  const parsed = parseLinkUrl(url);
+  if (!parsed) {
+    return res.status(400).json({ error: 'Invalid URL' });
   }
 
-  // Fallback: Return a transparent 1x1 png or simple placeholder
+  const key = parsed.origin;
+  let cached = faviconCache.get(key);
+  if (!cached || cached.expires < Date.now()) {
+    if (!faviconInFlight.has(key)) {
+      faviconInFlight.set(key, (async () => {
+        const allowDirect = await isKnownOrigin(key);
+        const icon = await resolveFavicon(parsed, allowDirect);
+        if (faviconCache.size >= FAVICON_CACHE_MAX) {
+          faviconCache.delete(faviconCache.keys().next().value);
+        }
+        const entry = { icon, expires: Date.now() + (icon ? FAVICON_OK_TTL_MS : FAVICON_MISS_TTL_MS) };
+        faviconCache.set(key, entry);
+        return entry;
+      })().finally(() => faviconInFlight.delete(key)));
+    }
+    try {
+      cached = await faviconInFlight.get(key);
+    } catch {
+      cached = { icon: null, expires: 0 };
+    }
+  }
+
+  if (cached.icon) {
+    res.setHeader('Content-Type', cached.icon.contentType);
+    res.setHeader('Cache-Control', 'public, max-age=604800'); // Cache for 7 days
+    return res.send(cached.icon.body);
+  }
+
+  // Let the browser remember misses too, so it doesn't re-request them on every load
+  res.setHeader('Cache-Control', 'public, max-age=3600');
   res.status(404).send('Favicon not found');
 });
 
