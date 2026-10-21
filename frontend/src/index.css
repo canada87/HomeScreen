@@ -438,6 +438,7 @@ body {
   font-family: inherit;
   font-size: 1.05rem;
   line-height: 1.5;
+  cursor: text;
 }
 
 /* Todo List Widget */

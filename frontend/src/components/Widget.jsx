@@ -185,6 +185,7 @@ export default function Widget({
   onDrop 
 }) {
   const [editingWidget, setEditingWidget] = useState(false);
+  const [cardDraggable, setCardDraggable] = useState(true);
   const [widgetTitle, setWidgetTitle] = useState(widget.title);
   const [noteColor, setNoteColor] = useState(widget.properties.color || 'yellow');
   
@@ -569,9 +570,16 @@ export default function Widget({
   const totalCount = todoItems.length;
   const percentComplete = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
+  // A draggable card hijacks mouse clicks/selection inside text fields, so disable
+  // dragging whenever the press starts on an editable element.
+  const handleCardMouseDown = (e) => {
+    setCardDraggable(!e.target.closest('textarea, input, select'));
+  };
+
   return (
-    <div 
-      draggable="true"
+    <div
+      draggable={cardDraggable ? 'true' : 'false'}
+      onMouseDown={handleCardMouseDown}
       onDragStart={onDragStart}
       onDragOver={handleCardDragOver}
       onDragLeave={handleCardDragLeave}
